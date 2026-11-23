@@ -139,3 +139,69 @@ run "smaller_required_set_is_allowed" {
     error_message = "a module caller can narrow required_tags"
   }
 }
+
+run "empty_string_value_is_rejected" {
+  command = plan
+
+  variables {
+    tags = {
+      cost-center = "CC-1234"
+      owner       = ""
+      environment = "dev"
+      project     = "billing-reports"
+    }
+  }
+
+  expect_failures = [var.tags]
+}
+
+# Values are case-sensitive: "Prod" is not "prod", so billing reports can't split.
+run "environment_value_case_is_enforced" {
+  command = plan
+
+  variables {
+    tags = {
+      cost-center = "CC-1234"
+      owner       = "platform@example.com"
+      environment = "Prod"
+      project     = "billing-reports"
+    }
+  }
+
+  expect_failures = [var.tags]
+}
+
+run "lowercase_cost_center_prefix_is_rejected" {
+  command = plan
+
+  variables {
+    tags = {
+      cost-center = "cc-1234"
+      owner       = "platform@example.com"
+      environment = "dev"
+      project     = "billing-reports"
+    }
+  }
+
+  expect_failures = [aws_s3_bucket.this]
+}
+
+run "uppercase_required_tag_key_is_rejected" {
+  command = plan
+
+  variables {
+    required_tags = ["Cost-Center"]
+  }
+
+  expect_failures = [var.required_tags]
+}
+
+run "no_tags_at_all_is_rejected" {
+  command = plan
+
+  variables {
+    tags = {}
+  }
+
+  expect_failures = [aws_s3_bucket.this]
+}

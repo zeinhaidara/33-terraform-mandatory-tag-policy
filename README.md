@@ -5,8 +5,9 @@ cost-allocation tags are complete and well formed. It uses only native
 Terraform: variable validation and resource preconditions, tested with
 `terraform test` and a mocked AWS provider.
 
-> **Status:** the tag rules are covered by 9 `terraform test` runs (2
-> passing plans, 7 expected failures) against `mock_provider "aws"`.
+> **Status:** the tag rules are covered by 14 `terraform test` runs (2
+> passing plans, 12 expected failures, including empty and blank values,
+> value case, and uppercase keys) against `mock_provider "aws"`.
 > `fmt`, `validate`, and the example root's `init`/`validate` run in CI.
 > Nothing has been planned or applied against a real AWS account.
 > **Scope:** enforcement applies only to resources created through this
@@ -16,6 +17,11 @@ Terraform: variable validation and resource preconditions, tested with
 
 > Build a Terraform module + policy that enforces mandatory cost-allocation
 > tags and rejects resources missing them.
+
+Why it matters: untagged resources can't be charged back to a team, so cost
+reports end up with a large "unknown" line. Refusing to plan without the
+tags fixes this where resources are created, instead of chasing owners
+later.
 
 ## How the checks are layered
 
@@ -33,7 +39,7 @@ flowchart TD
 |---|---|---|
 | Tag keys are lowercase (`^[a-z][a-z0-9-]*$`) | `var.tags` validation | `Owner` and `owner` would be two different cost allocation tags |
 | Tag values are not blank | `var.tags` validation | an empty tag allocates cost to nobody |
-| `environment`, if set, is `dev`, `test`, `staging` or `prod` | `var.tags` validation | keeps the cost report's groups clean |
+| `environment`, if set, is `dev`, `test`, `staging` or `prod` (case-sensitive, so `Prod` fails) | `var.tags` validation | keeps the cost report's groups clean |
 | Every key in `required_tags` is present | `aws_s3_bucket` precondition | compares two inputs, so it sits next to the resource |
 | `cost-center` looks like `CC-1234` | `aws_s3_bucket` precondition | example format rule |
 | `required_tags` is non-empty and lowercase | `var.required_tags` validation | stops a caller switching the check off with `[]` |
